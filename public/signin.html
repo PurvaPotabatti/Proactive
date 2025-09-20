@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sign In - Proactive</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="form-page">
+  <div class="container">
+    <h2>Sign In</h2>
+    <form id="signinForm">
+      <input type="email" name="email" placeholder="Email" required>
+      <div class="password-wrapper">
+        <input type="password" name="password" placeholder="Password" required minlength="6">
+        <span class="toggle-pass">Show</span>
+      </div>
+      <button type="submit" id="signinBtn">Sign In</button>
+    </form>
+
+    <p class="signin-link">
+      Don't have an account? <a href="/signup">Sign Up</a>
+    </p>
+
+    <!-- Notification -->
+    <div id="notification" class="notification"></div>
+  </div>
+
+  <script>
+    const form = document.getElementById("signinForm");
+    const btn = document.getElementById("signinBtn");
+    const notification = document.getElementById("notification");
+    const toggles = document.querySelectorAll(".toggle-pass");
+
+    function showNotification(message, type="success") {
+      notification.textContent = message;
+      notification.className = `notification ${type}`;
+      notification.style.opacity = 1;
+      setTimeout(() => notification.style.opacity = 0, 3000);
+    }
+
+    // Show/hide password
+    toggles.forEach(toggle => {
+      toggle.addEventListener("click", () => {
+        const input = toggle.previousElementSibling;
+        if(input.type === "password") {
+          input.type = "text";
+          toggle.textContent = "Hide";
+        } else {
+          input.type = "password";
+          toggle.textContent = "Show";
+        }
+      });
+    });
+
+    // Form submit
+    form.addEventListener("submit", async e => {
+      e.preventDefault();
+      btn.textContent = "Signing In...";
+      btn.disabled = true;
+
+      const data = Object.fromEntries(new FormData(form));
+
+      try {
+        const res = await fetch("/api/signin", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(data)
+        });
+
+        const result = await res.json();
+
+        if(res.ok) {
+           localStorage.setItem("userId", result._id);
+           localStorage.setItem("userName", result.username); // <-- add this
+          showNotification(result.message || "Login successful", "success");
+          setTimeout(() => window.location.href = "index.html", 1500);
+        } else {
+          showNotification(result.error || "Invalid credentials", "error");
+        }
+      } catch(err) {
+        console.error(err);
+        showNotification("Server error. Try again.", "error");
+      }
+
+      btn.textContent = "Sign In";
+      btn.disabled = false;
+    });
+  </script>
+</body>
+</html>

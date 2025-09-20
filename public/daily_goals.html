@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Daily Goals - Proactive</title>
+<link rel="stylesheet" href="style.css">
+<style>
+  .container {
+  max-width: 600px;
+  margin: 20px auto;
+  padding: 10px;
+}
+.task-card button {
+  border: none;
+  padding: 8px 12px;
+  margin-left: 10px;
+  border-radius: 6px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+/* Delete button */
+.task-card button.delete {
+  background: #ff4d4f;
+  color: white;
+}
+
+.task-card button.delete:hover {
+  background: #e63946;
+}
+
+/* Edit button */
+.task-card button.edit {
+  background: #4CAF50;
+  color: white;
+}
+
+.task-card button.edit:hover {
+  background: #45a049;
+}
+
+</style>
+</head>
+<body>
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <h2>Proactive</h2>
+    <section>
+      <h3>Menu</h3>
+      <button class="menu-btn" onclick="window.location.href='daily_goals.html'">Daily Goals</button>
+      <button class="menu-btn" onclick="window.location.href='course_modules.html'">Course Modules</button>
+      <button class="menu-btn" onclick="window.location.href='milestones.html'">Milestones</button>
+    </section>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="main">
+    <header class="header">
+      <div class="streak" id="streak">🔥 Streak: 1</div>
+      <div id="userArea" class="profile"></div>
+    </header>
+
+    <section class="content">
+      <div class="container">
+        <h3>Daily Goals</h3>
+        <div id="taskContainer">Loading tasks...</div>
+      </div>
+    </section>
+  </main>
+
+<script>
+const userArea = document.getElementById("userArea");
+const content = document.getElementById("taskContainer");
+const userId = localStorage.getItem("userId");
+const userName = localStorage.getItem("userName") || "User";
+
+// Redirect if not signed in
+if(!userId) {
+  alert("Please sign in first.");
+  window.location.href = "/signin";
+}
+
+// Render user profile button + dropdown
+userArea.innerHTML = `
+  <button id="userBtn" class="menu-btn" style="background:#0B2E33; color:white; font-weight:600;">
+    Hi, ${userName}
+  </button>
+  <div class="profile-menu">
+    <a href="profile.html">Profile</a>
+    <a href="calendar.html">Calendar</a>
+    <a href="progress.html">Progress</a>
+    <a href="notebook.html">Notebook</a>
+    <a href="#" id="signOut">Sign Out</a>
+  </div>
+`;
+
+const userBtn = document.getElementById("userBtn");
+const menu = userArea.querySelector(".profile-menu");
+
+userBtn.addEventListener("click", e => {
+  e.stopPropagation();
+  menu.classList.toggle("active");
+});
+document.addEventListener("click", () => menu.classList.remove("active"));
+
+document.getElementById("signOut").addEventListener("click", () => {
+  localStorage.removeItem("userId");
+  localStorage.removeItem("userName");
+  window.location.href = "/signin";
+});
+
+// Load tasks from backend
+async function loadTasks() {
+  try {
+    const res = await fetch(`/api/daily_goals/${userId}`);
+    const data = await res.json();
+
+    if(!data || data.length === 0) {
+      content.innerHTML = `
+        <p>No tasks yet. Add your first task below!</p>
+        <div class="add-task">
+          <input type="text" id="newTask" placeholder="New task">
+          <button id="addTaskBtn">Add Task</button>
+        </div>
+      `;
+    } else {
+      content.innerHTML = `
+        <ul id="taskList" class="task-list">
+          ${data.map(task => `
+            <li>
+              <input type="checkbox" data-id="${task._id}" ${task.completed ? "checked" : ""}>
+              <span>${task.title}</span>
+              <button class="edit" data-id="${task._id}">✏️</button>
+              <button class="delete" data-id="${task._id}">🗑</button>
+            </li>`).join('')}
+        </ul>
+        <div class="add-task">
+          <input type="text" id="newTask" placeholder="New task">
+          <button id="addTaskBtn">Add Task</button>
+        </div>
+      `;
+    }
+
+    // Toggle completed
+    document.querySelectorAll("#taskList input[type=checkbox]").forEach(cb => {
+      cb.addEventListener("change", async e => {
+        const id = e.target.dataset.id;
+        await fetch(`/api/daily_goals/${id}`, {
+          method: "PUT",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({ completed: e.target.checked })
+        });
+      });
+    });
+
+    // Delete task
+    document.querySelectorAll(".delete").forEach(btn => {
+      btn.addEventListener("click", async e => {
+        const id = e.target.dataset.id;
+        await fetch(`/api/daily_goals/${id}`, { method: "DELETE" });
+        loadTasks();
+      });
+    });
+
+    // Edit task
+    document.querySelectorAll(".edit").forEach(btn => {
+      btn.addEventListener("click", e => {
+        const li = btn.closest("li");
+        const span = li.querySelector("span");
+        const newTitle = prompt("Edit task:", span.textContent);
+        if(newTitle && newTitle.trim() !== "") {
+          fetch(`/api/daily_goals/${btn.dataset.id}`, {
+            method: "PUT",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({ title: newTitle })
+          }).then(() => loadTasks());
+        }
+      });
+    });
+
+    // Add new task
+    document.getElementById("addTaskBtn").addEventListener("click", async () => {
+      const title = document.getElementById("newTask").value.trim();
+      if(!title) return;
+      await fetch(`/api/daily_goals`, {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({ title, user: userId })
+      });
+      document.getElementById("newTask").value = "";
+      loadTasks();
+    });
+
+  } catch(err) {
+    console.error(err);
+    content.innerHTML = "<p>Error loading tasks</p>";
+  }
+}
+
+loadTasks();
+</script>
+</body>
+</html>

@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sign Up - Proactive</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="form-page">
+  <div class="container">
+    <h2>Sign Up</h2>
+    <form id="signupForm">
+      <input name="fullname" placeholder="Full Name" required>
+      <input name="username" placeholder="Username" required>
+      <input type="email" name="email" placeholder="Email" required>
+      <div class="password-wrapper">
+        <input type="password" name="password" placeholder="Password" required minlength="6">
+        <span class="toggle-pass">Show</span>
+      </div>
+      <div class="password-wrapper">
+        <input type="password" name="confirmPassword" placeholder="Confirm Password" required minlength="6">
+        <span class="toggle-pass">Show</span>
+      </div>
+      <button type="submit" id="signupBtn">Sign Up</button>
+    </form>
+<p class="signin-link">
+  Already have an account? <a href="/signin">Sign In</a>
+</p>
+    <!-- Notification -->
+    <div id="notification" class="notification"></div>
+  </div>
+
+  <script>
+    const form = document.getElementById("signupForm");
+    const btn = document.getElementById("signupBtn");
+    const notification = document.getElementById("notification");
+    const toggles = document.querySelectorAll(".toggle-pass");
+
+ function showNotification(message, type="success") {
+  notification.textContent = message;
+  notification.className = `notification ${type} show`; // add show class
+  //setTimeout(() => notification.className = `notification ${type}`, 3000); // remove show
+}
+
+    toggles.forEach(toggle => {
+      toggle.addEventListener("click", () => {
+        const input = toggle.previousElementSibling;
+        if(input.type === "password") {
+          input.type = "text";
+          toggle.textContent = "Hide";
+        } else {
+          input.type = "password";
+          toggle.textContent = "Show";
+        }
+      });
+    });
+
+   form.addEventListener("submit", async e => {
+  e.preventDefault();
+  const data = Object.fromEntries(new FormData(form));
+
+  if(data.password !== data.confirmPassword) {
+    showNotification("Passwords do not match!", "error");
+    return;
+  }
+
+  btn.textContent = "Signing Up...";
+  btn.disabled = true;
+
+  try {
+    const res = await fetch("/api/signup", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        username: data.username,
+        email: data.email,
+        password: data.password,
+        fullname: data.fullname
+      })
+    });
+
+    const result = await res.json();
+    console.log("Response from backend:", result);
+
+    if(res.ok) {
+       localStorage.setItem("userId", result._id); 
+      localStorage.setItem("userName", result.username); // <-- add this
+      showNotification(result.message || "Registered successfully!", "success");
+      form.reset();
+      // Redirect to signin page after 2 seconds
+      setTimeout(() => window.location.href = "/signin", 2000);
+
+      
+    } else {
+      showNotification(result.message || "Something went wrong", "error");
+      // If email already exists, redirect immediately
+      if(result.message && result.message.includes("Email already")) {
+        setTimeout(() => window.location.href = "/signin", 2000);
+      }
+    }
+  } catch(err) {
+    console.error(err);
+    showNotification("Server error. Try again.", "error");
+  }
+
+  btn.textContent = "Sign Up";
+  btn.disabled = false;
+});
+
+  </script>
+</body>
+</html>
