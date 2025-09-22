@@ -14,7 +14,6 @@ const PORT = process.env.PORT || 5000;
 // Middleware
 app.use(express.json());
 app.use(cors());
-// Correct path to the public folder
 app.use(express.static(path.join(__dirname, '../public')));
 
 // Connect to MongoDB
@@ -29,6 +28,23 @@ app.get('/signin', (req, res) => {
 
 app.get('/signup', (req, res) => {
     res.sendFile(path.join(__dirname, '../public/signup.html'));
+});
+
+// Add routes for the pages from your sidebar
+app.get('/daily_goals.html', (req, res) => {
+    res.sendFile(path.join(__dirname, '../public/daily_goals.html'));
+});
+
+app.get('/course_modules.html', (req, res) => {
+    res.sendFile(path.join(__dirname, '../public/course_modules.html'));
+});
+
+app.get('/milestones.html', (req, res) => {
+    res.sendFile(path.join(__dirname, '../public/milestones.html'));
+});
+
+app.get('/index.html', (req, res) => {
+    res.sendFile(path.join(__dirname, '../public/index.html'));
 });
 
 // Routes
