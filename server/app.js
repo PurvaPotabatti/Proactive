@@ -4,9 +4,11 @@ const dotenv = require('dotenv');
 const path = require('path');
 const cors = require('cors');
 const authRoutes = require('./routes/auth');
+const dailyGoalsRoutes = require('./routes/dailyGoals'); // Import the new router
 
-// Load environment variables from .env file
-dotenv.config();
+// Load environment variables from .env file from the root directory
+// This handles cases where the script is run from the `server` directory
+dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -49,6 +51,7 @@ app.get('/index.html', (req, res) => {
 
 // Routes
 app.use('/api', authRoutes);
+app.use('/api', dailyGoalsRoutes); // Use the new router
 
 // Start the server
 app.listen(PORT, () => {
